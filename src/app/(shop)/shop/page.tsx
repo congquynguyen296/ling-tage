@@ -34,7 +34,7 @@ function ShopCatalogContent() {
   const activeFilterCount = sizes.length + (typeof maxPrice === "number" ? 1 : 0);
 
   return (
-    <section className="max-w-[1500px] mx-auto px-5 py-10">
+    <section className="w-full px-5 sm:px-8 md:px-12 lg:px-14 py-10">
       <Crumbs items={[["Home", "/"], ["Shop"]]} />
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mt-6 mb-8">
@@ -62,12 +62,8 @@ function ShopCatalogContent() {
         onClearAll={clearFilters}
       />
 
-      {/* Product Grid with smooth dimming while API is fetching */}
-      <div
-        className={`mt-8 transition-opacity duration-300 ${
-          isSyncingApi ? "opacity-50 pointer-events-none" : "opacity-100"
-        }`}
-      >
+      {/* Product Grid */}
+      <div className="mt-8">
         {products.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-10">
             {products.map((p) => (

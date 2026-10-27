@@ -47,16 +47,19 @@ export function FilterDrawer({
     }
   }, [open, sizes, maxPrice]);
 
-  // Lock body scroll while drawer is open
+  // Lock background scroll completely (both html and body) when drawer is open
   useEffect(() => {
     if (!mounted) return;
     if (open) {
       document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
     }
     return () => {
       document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
     };
   }, [open, mounted]);
 
@@ -99,6 +102,7 @@ export function FilterDrawer({
       {/* Backdrop covering the entire viewport */}
       <div
         onClick={onClose}
+        onTouchMove={(e) => e.preventDefault()}
         className="fixed inset-0 z-[80] bg-black/40 backdrop-blur-[2px]"
         style={{
           opacity: open ? 1 : 0,
@@ -109,7 +113,7 @@ export function FilterDrawer({
 
       {/* Drawer panel floating above header and page content */}
       <aside
-        className="fixed top-0 right-0 bottom-0 z-[85] w-[380px] max-w-[90vw] flex flex-col shadow-2xl"
+        className="fixed top-0 right-0 bottom-0 z-[85] w-[340px] max-w-[85vw] flex flex-col shadow-2xl"
         style={{
           background: "var(--bg)",
           paddingTop: "env(safe-area-inset-top,0px)",

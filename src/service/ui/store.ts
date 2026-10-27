@@ -1,18 +1,28 @@
 import { create } from "zustand";
 
+export type ProgressState = "idle" | "loading" | "completing";
+
 interface UiState {
-  progressKey: number;
+  progressState: ProgressState;
+  startProgress: () => void;
+  completeProgress: () => void;
+  /**
+   * Backward-compatibility alias for startProgress
+   */
   triggerProgress: () => void;
 }
 
-/**
- * Zustand store to control UI notifications, global animations,
- * and the 2-second debounced top loading bar.
- */
-export const useUiStore = create<UiState>((set) => ({
-  progressKey: 0,
+export const useUiStore = create<UiState>((set, get) => ({
+  progressState: "idle",
+  startProgress: () => {
+    set({ progressState: "loading" });
+  },
+  completeProgress: () => {
+    if (get().progressState !== "idle") {
+      set({ progressState: "completing" });
+    }
+  },
   triggerProgress: () => {
-    set((state) => ({ progressKey: state.progressKey + 1 }));
+    get().startProgress();
   },
 }));
-

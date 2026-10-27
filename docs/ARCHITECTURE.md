@@ -95,6 +95,6 @@ Mọi luồng dữ liệu tương tác đều có Zod Schema tương ứng nằm
 
 - Khi gọi dữ liệu từ tầng service (`fetchProductsApi`, `searchProductsApi`, `submitOrderAction`, `updateVariantStockService`, `updateOrderStatusAction`), hệ thống thông qua `springBootFetch` trong [`src/config/db.ts`](file:///d:/learning-myself/ling-tage/src/config/db.ts).
 - Khi ở chế độ Mock (`NEXT_PUBLIC_USE_MOCK_API=true`), hàm `mockApiCall` kích hoạt cơ chế **Debounce 2000ms (2 giây)** trên từng `debounceKey` (ví dụ: gõ tìm kiếm liên tục thì chỉ gọi sau 2s khi ngừng gõ, đổi trạng thái đơn chờ 2s mô phỏng độ trễ mạng thực tế).
-- **Thanh Top Progress Bar mượt mà**: Thay vì làm mờ ảnh hay tracking scroll, độ trễ debounce 2s và quá trình chuyển màn hình được hiển thị trực quan qua thanh `TopProgressBar` (`cubic-bezier(0.16, 1, 0.3, 1)` chạy trong 2000ms) đặt ở đỉnh trang, giúp trải nghiệm mượt mà, không giật và giữ nguyên độ sắc nét của hình ảnh sản phẩm.
+- **Thanh Top Progress Bar phản hồi mượt mà**: Thay vì làm mờ danh sách sản phẩm hay chạy timer cứng 2s gây lệch pha, thanh `TopProgressBar` đồng bộ chính xác với vòng đời điều hướng và API: bắt đầu khi nhấp chuyển trang/lọc dữ liệu và hoàn tất ngay lập tức (100% rồi ẩn mượt) khi trang mới/dữ liệu đã cập nhật xong, đảm bảo hình ảnh sắc nét và không bị giật lag.
 - Khi chuyển sang backend Spring Boot thực thụ, chỉ cần đặt `NEXT_PUBLIC_USE_MOCK_API=false`.
 

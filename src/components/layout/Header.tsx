@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Icons } from "@/components/ui/Icons";
 import { MobileMenu } from "./MobileMenu";
 import { SearchOverlay } from "./SearchOverlay";
@@ -9,6 +10,7 @@ import { useCart } from "@/hooks/useCart";
 import { useAuthStore } from "@/service/auth/store";
 
 export function Header() {
+  const pathname = usePathname();
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { count, toastMessage } = useCart();
@@ -16,6 +18,12 @@ export function Header() {
 
   const announcement =
     "TAGE FW26 DELIVERY 5: LIVE NOW — USE CODE TAGE10 FOR 10% OFF YOUR FIRST PURCHASE";
+
+  // Dedicated minimal Cart & Checkout Header (logo on left, Continue Shopping on right)
+  const isMinimalLayout =
+    pathname === "/cart" ||
+    pathname === "/checkout" ||
+    pathname?.startsWith("/checkout");
 
   // Scroll parallax CSS variable (--sy) + IntersectionObserver for .rv elements
   useEffect(() => {
@@ -59,10 +67,38 @@ export function Header() {
     };
   }, []);
 
+  if (isMinimalLayout) {
+    return (
+      <header
+        className="sticky top-0 z-30 border-b line"
+        style={{
+          background: "var(--bg)",
+          paddingTop: "env(safe-area-inset-top,0px)",
+        }}
+      >
+        <div className="max-w-[1200px] mx-auto px-5 h-16 md:h-20 flex items-center justify-between">
+          <Link href="/" aria-label="TAGE Home" className="flex items-center">
+            <img
+              src="/logo/tage_logo.png"
+              alt="TAGE"
+              className="h-12 md:h-16 w-auto object-contain py-1"
+            />
+          </Link>
+          <Link
+            href="/shop"
+            className="text-xs tracking-[0.2em] uppercase mute hover:text-[color:var(--fg)] transition-colors"
+          >
+            Continue Shopping →
+          </Link>
+        </div>
+      </header>
+    );
+  }
+
   return (
     <>
       {/* Announcement marquee */}
-      <div className="card border-b line text-[11px] tracking-[0.25em] py-2 overflow-hidden">
+      <div className="w-full card border-b line text-[11px] tracking-[0.25em] py-2 overflow-hidden">
         <div className="marquee">
           {[...Array(8)].map((_, i) => (
             <span key={i} className="px-10 whitespace-nowrap">
@@ -72,7 +108,7 @@ export function Header() {
         </div>
       </div>
 
-      {/* Sticky Header */}
+      {/* Sticky Header (Full width layout) */}
       <header
         className="sticky top-0 z-30 border-b line"
         style={{
@@ -80,7 +116,7 @@ export function Header() {
           paddingTop: "env(safe-area-inset-top,0px)",
         }}
       >
-        <div className="max-w-[1500px] mx-auto px-5 h-16 md:h-20 grid grid-cols-[1fr_auto_1fr] items-center">
+        <div className="w-full px-5 sm:px-8 md:px-12 lg:px-14 h-16 md:h-20 grid grid-cols-[1fr_auto_1fr] items-center">
           <nav className="hidden md:flex items-center gap-6 text-xs tracking-[0.15em] uppercase">
             <Link className="ul" href="/shop">
               Shop

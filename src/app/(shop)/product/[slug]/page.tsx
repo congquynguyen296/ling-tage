@@ -71,7 +71,7 @@ export default function ProductDetailPage({
   };
 
   return (
-    <section className="max-w-[1500px] mx-auto px-5 py-10">
+    <section className="w-full px-5 sm:px-8 md:px-12 lg:px-14 py-10">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

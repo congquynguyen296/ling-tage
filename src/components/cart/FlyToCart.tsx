@@ -44,6 +44,8 @@ export function flyToCart(image: string, startElement?: HTMLElement | null) {
   useFlyToCart.getState().triggerFly(image, startElement);
 }
 
+const FLY_DURATION = 900; // Slower, more perceptible particle animation (was 650ms)
+
 function ParticleItem({
   particle,
   onComplete,
@@ -78,7 +80,7 @@ function ParticleItem({
         cartTarget.classList.add("cart-bump");
       }
       onComplete();
-    }, 650);
+    }, FLY_DURATION);
 
     return () => {
       cancelAnimationFrame(timer);
@@ -100,7 +102,7 @@ function ParticleItem({
         transform: `translate3d(${currentX}px, ${currentY}px, 0) scale(${currentScale})`,
         opacity: currentOpacity,
         transition: active
-          ? "transform 650ms cubic-bezier(0.2, 0.8, 0.25, 1), opacity 650ms cubic-bezier(0.4, 0, 1, 1)"
+          ? `transform ${FLY_DURATION}ms cubic-bezier(0.2, 0.8, 0.25, 1), opacity ${FLY_DURATION}ms cubic-bezier(0.4, 0, 1, 1)`
           : "none",
         width: "56px",
         height: "70px",

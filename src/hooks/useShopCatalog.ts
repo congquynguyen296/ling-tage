@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Product } from "@/types";
 import { useProductStore } from "@/service/products/store";
 import { fetchProductsApi, filterAndSortProducts } from "@/service/products/queries";
@@ -10,8 +10,17 @@ import { useUiStore } from "@/service/ui/store";
 export const SHOP_PAGE_SIZE = 9;
 
 export function useShopCatalog() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const initialCategory = searchParams.get("category") || "All";
+
+  // Read initial category safely from window.location if available to avoid SSR/hydration lag
+  const initialCategory = useMemo(() => {
+    if (typeof window !== "undefined") {
+      const urlCat = new URLSearchParams(window.location.search).get("category");
+      if (urlCat) return urlCat;
+    }
+    return searchParams.get("category") || "All";
+  }, [searchParams]);
 
   const allProducts = useProductStore((s) => s.products);
   const [category, setCategory] = useState<string>(initialCategory);
@@ -21,10 +30,20 @@ export function useShopCatalog() {
   const [page, setPage] = useState<number>(1);
   const [filterOpen, setFilterOpen] = useState(false);
 
-  // Sync URL category param if user navigates from header/footer
+  const prevParamCatRef = useRef(initialCategory);
+  const mountedTimeRef = useRef(Date.now());
+
+  // Sync URL category param only when it genuinely changes via URL
   useEffect(() => {
-    const paramCat = searchParams.get("category");
-    if (paramCat) {
+    const paramCat =
+      (typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("category")
+        : null) ||
+      searchParams.get("category") ||
+      "All";
+
+    if (paramCat !== prevParamCatRef.current) {
+      prevParamCatRef.current = paramCat;
       setCategory(paramCat);
       setPage(1);
     }
@@ -48,12 +67,23 @@ export function useShopCatalog() {
   const [totalItems, setTotalItems] = useState<number>(initialPaginated.total);
   const [totalPages, setTotalPages] = useState<number>(initialPaginated.totalPages);
   const [isSyncingApi, setIsSyncingApi] = useState(false);
+  const isFirstMountRef = useRef(true);
 
-  // Debounced API sync with simulated 2s delay & progress bar
+  // Debounced API sync with progress bar on filter / page changes
   useEffect(() => {
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+      return;
+    }
+
+    // Skip if settling from initial page transition mount (< 400ms) to avoid double progress bar
+    if (Date.now() - mountedTimeRef.current < 400) {
+      return;
+    }
+
     let cancelled = false;
     setIsSyncingApi(true);
-    useUiStore.getState().triggerProgress();
+    useUiStore.getState().startProgress();
 
     fetchProductsApi(
       {
@@ -72,10 +102,14 @@ export function useShopCatalog() {
           setTotalItems(res.data.total);
           setTotalPages(res.data.totalPages);
           setIsSyncingApi(false);
+          useUiStore.getState().completeProgress();
         }
       })
       .catch(() => {
-        if (!cancelled) setIsSyncingApi(false);
+        if (!cancelled) {
+          setIsSyncingApi(false);
+          useUiStore.getState().completeProgress();
+        }
       });
 
     return () => {
@@ -95,10 +129,25 @@ export function useShopCatalog() {
     );
   }, []);
 
-  const handleSelectCategory = useCallback((cat: string) => {
-    setCategory(cat);
-    setPage(1);
-  }, []);
+  const handleSelectCategory = useCallback(
+    (cat: string) => {
+      setCategory(cat);
+      setPage(1);
+      prevParamCatRef.current = cat;
+
+      // Update URL query parameter without triggering full page reload or scrolling
+      const params = new URLSearchParams(window.location.search);
+      if (cat === "All") {
+        params.delete("category");
+      } else {
+        params.set("category", cat);
+      }
+      const queryString = params.toString();
+      const newUrl = queryString ? `/shop?${queryString}` : "/shop";
+      router.push(newUrl, { scroll: false });
+    },
+    [router]
+  );
 
   const clearFilters = useCallback(() => {
     setSizes([]);

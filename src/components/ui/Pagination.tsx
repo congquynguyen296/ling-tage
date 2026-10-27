@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePagination, DOTS } from "@/hooks/usePagination";
 import { useScrollTop } from "@/hooks/useScrollTop";
 
@@ -33,10 +34,19 @@ export function Pagination({
     siblingCount,
   });
 
-  // Automatically scroll to top ONLY after data loading completes
-  useScrollTop(autoScrollTop ? currentPage : undefined, {
-    isLoading,
-  });
+  const { scrollToTop } = useScrollTop();
+  const [pendingScroll, setPendingScroll] = useState(false);
+
+  // Execute scroll to top ONLY after the user clicked a page change AND new data has finished loading
+  useEffect(() => {
+    if (pendingScroll && !isLoading) {
+      const raf = requestAnimationFrame(() => {
+        scrollToTop();
+        setPendingScroll(false);
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [pendingScroll, isLoading, scrollToTop]);
 
   if (totalPages <= 1) return null;
 
@@ -48,6 +58,9 @@ export function Pagination({
       isLoading
     ) {
       return;
+    }
+    if (autoScrollTop) {
+      setPendingScroll(true);
     }
     onPageChange(targetPage);
   };

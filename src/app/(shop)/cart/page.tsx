@@ -6,7 +6,7 @@ import { CartItemRow } from "@/components/cart/CartItemRow";
 import { CartSummary } from "@/components/cart/CartSummary";
 
 export default function CartPage() {
-  const { items, updateQty, removeItem } = useCart();
+  const { items, removeItem } = useCart();
 
   if (!items.length) {
     return (
@@ -31,7 +31,6 @@ export default function CartPage() {
             <CartItemRow
               key={item.key}
               item={item}
-              onUpdateQty={(delta) => updateQty(item.key, delta)}
               onRemove={() => removeItem(item.key)}
             />
           ))}

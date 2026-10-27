@@ -14,7 +14,18 @@ export function filterAndSortProducts(
   let filtered = [...source];
 
   if (params.category && params.category !== "All" && params.category !== "New Arrivals") {
-    filtered = filtered.filter((p) => p.category === params.category);
+    const catLower = params.category.toLowerCase();
+    if (catLower === "top") {
+      filtered = filtered.filter((p) =>
+        ["Outerwear", "Shirts", "Knitwear", "Leather"].includes(p.category)
+      );
+    } else if (catLower === "bottom") {
+      filtered = filtered.filter((p) =>
+        ["Bottoms", "Denim"].includes(p.category)
+      );
+    } else {
+      filtered = filtered.filter((p) => p.category === params.category);
+    }
   } else if (params.category === "New Arrivals") {
     filtered = filtered.filter((p) => p.isNew);
   }

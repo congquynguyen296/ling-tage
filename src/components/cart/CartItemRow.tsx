@@ -6,16 +6,20 @@ import { money, getSafeProductImage } from "@/config/utils";
 
 interface CartItemRowProps {
   item: CartItem;
-  onUpdateQty: (delta: number) => void;
   onRemove: () => void;
 }
 
-export function CartItemRow({ item, onUpdateQty, onRemove }: CartItemRowProps) {
+export function CartItemRow({ item, onRemove }: CartItemRowProps) {
+  const descriptionText =
+    item.product.description ||
+    "Unique archive piece. Relaxed, considered fit with clean architectural finishing.";
+
   return (
     <div className="page flex gap-5 py-6 border-b line">
+      {/* Product Image */}
       <Link
         href={`/product/${item.product.slug}`}
-        className="w-24 shrink-0 block relative overflow-hidden card"
+        className="w-24 sm:w-28 shrink-0 block relative overflow-hidden card"
         style={{ aspectRatio: "3/4" }}
       >
         <img
@@ -28,44 +32,40 @@ export function CartItemRow({ item, onUpdateQty, onRemove }: CartItemRowProps) {
           }}
         />
       </Link>
+
+      {/* Product Details & Description */}
       <div className="flex-1 flex flex-col justify-between text-sm">
-        <div className="flex justify-between gap-4">
-          <div>
-            <Link
-              href={`/product/${item.product.slug}`}
-              className="uppercase tracking-wide hover:underline"
-            >
-              {item.product.name}
-            </Link>
-            <div className="mute text-xs mt-1">
-              {item.color} · {item.size}
+        <div>
+          {/* Title and Price */}
+          <div className="flex justify-between items-start gap-4">
+            <div>
+              <Link
+                href={`/product/${item.product.slug}`}
+                className="uppercase tracking-wide font-medium hover:underline block"
+              >
+                {item.product.name}
+              </Link>
+              <div className="mute text-xs mt-1">
+                {item.color} · Size {item.size}
+              </div>
             </div>
+            <div className="font-medium whitespace-nowrap">{money(item.product.price)}</div>
           </div>
-          <div>{money(item.product.price * item.qty)}</div>
+
+          {/* Product Description (replaces the quantity selector) */}
+          <p className="mute text-xs leading-relaxed mt-2.5 line-clamp-2 sm:line-clamp-3 max-w-xl">
+            {descriptionText}
+          </p>
         </div>
-        <div className="flex justify-between items-center mt-4">
-          <div className="flex items-center border line">
-            <button
-              type="button"
-              className="px-3 py-1.5"
-              onClick={() => onUpdateQty(-1)}
-              aria-label="Decrease quantity"
-            >
-              −
-            </button>
-            <span className="w-7 text-center">{item.qty}</span>
-            <button
-              type="button"
-              className="px-3 py-1.5"
-              onClick={() => onUpdateQty(1)}
-              aria-label="Increase quantity"
-            >
-              +
-            </button>
-          </div>
+
+        {/* Footer actions: Qty indicator & Remove */}
+        <div className="flex justify-between items-center mt-4 pt-3 border-t line/50">
+          <span className="text-[11px] tracking-wider uppercase text-neutral-500 font-mono">
+            Qty: 1
+          </span>
           <button
             type="button"
-            className="text-xs mute underline hover:text-[color:var(--fg)]"
+            className="text-xs mute underline hover:text-[color:var(--fg)] transition-colors"
             onClick={onRemove}
           >
             Remove
@@ -75,4 +75,3 @@ export function CartItemRow({ item, onUpdateQty, onRemove }: CartItemRowProps) {
     </div>
   );
 }
-
