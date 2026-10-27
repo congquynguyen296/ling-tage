@@ -138,9 +138,10 @@ export function Header() {
               {user && <span className="dot" />}
             </Link>
             <Link
+              id="header-cart-icon"
               href="/cart"
               aria-label={`Cart, ${count} items`}
-              className="hic"
+              className="hic relative"
             >
               {Icons.bag}
               {count > 0 && (

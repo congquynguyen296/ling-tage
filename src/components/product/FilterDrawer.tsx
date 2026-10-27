@@ -4,15 +4,17 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { SIZE_GROUPS } from "@/service/products/mock";
 
+export interface FilterValues {
+  sizes: string[];
+  maxPrice?: number;
+}
+
 interface FilterDrawerProps {
   open: boolean;
   onClose: () => void;
   sizes: string[];
-  onToggleSize: (size: string) => void;
   maxPrice?: number;
-  onChangeMaxPrice?: (val: number | undefined) => void;
-  onClear: () => void;
-  count: number;
+  onApply: (filters: FilterValues) => void;
 }
 
 const PRICE_TIERS: Array<[string, number | undefined]> = [
@@ -26,17 +28,24 @@ export function FilterDrawer({
   open,
   onClose,
   sizes,
-  onToggleSize,
   maxPrice,
-  onChangeMaxPrice,
-  onClear,
-  count,
+  onApply,
 }: FilterDrawerProps) {
   const [mounted, setMounted] = useState(false);
+  const [draftSizes, setDraftSizes] = useState<string[]>(sizes);
+  const [draftMaxPrice, setDraftMaxPrice] = useState<number | undefined>(maxPrice);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Sync draft state from active filters whenever the drawer opens
+  useEffect(() => {
+    if (open) {
+      setDraftSizes(sizes);
+      setDraftMaxPrice(maxPrice);
+    }
+  }, [open, sizes, maxPrice]);
 
   // Lock body scroll while drawer is open
   useEffect(() => {
@@ -51,7 +60,7 @@ export function FilterDrawer({
     };
   }, [open, mounted]);
 
-  // Close on Escape key press
+  // Close on Escape key press without applying
   useEffect(() => {
     if (!mounted || !open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -63,9 +72,31 @@ export function FilterDrawer({
 
   if (!mounted) return null;
 
+  const toggleDraftSize = (s: string) => {
+    setDraftSizes((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
+    );
+  };
+
+  const handleClearDraft = () => {
+    setDraftSizes([]);
+    setDraftMaxPrice(undefined);
+  };
+
+  const handleApply = () => {
+    onApply({
+      sizes: draftSizes,
+      maxPrice: draftMaxPrice,
+    });
+    onClose();
+  };
+
+  const draftCount =
+    draftSizes.length + (typeof draftMaxPrice === "number" ? 1 : 0);
+
   return createPortal(
     <>
-      {/* Backdrop covering the entire viewport, including sticky header */}
+      {/* Backdrop covering the entire viewport */}
       <div
         onClick={onClose}
         className="fixed inset-0 z-[80] bg-black/40 backdrop-blur-[2px]"
@@ -90,7 +121,14 @@ export function FilterDrawer({
         }}
       >
         <div className="flex items-center justify-between px-6 h-16 md:h-20 border-b line">
-          <span className="text-xs tracking-[0.25em] uppercase font-medium">Filter</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs tracking-[0.25em] uppercase font-medium">Filter</span>
+            {draftCount > 0 && (
+              <span className="text-[10px] font-mono px-2 py-0.5 bg-[color:var(--accent)] text-white rounded-full">
+                {draftCount}
+              </span>
+            )}
+          </div>
           <button
             onClick={onClose}
             aria-label="Close"
@@ -107,59 +145,68 @@ export function FilterDrawer({
                 Size · {groupName}
               </div>
               <div className="grid grid-cols-5 gap-2">
-                {list.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => onToggleSize(s)}
-                    className={`py-3 text-sm transition-colors ${
-                      sizes.includes(s)
-                        ? "bg-[color:var(--accent)] text-white"
-                        : "bg-[color:var(--card)] hover:brightness-95"
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
+                {list.map((s) => {
+                  const isSelected = draftSizes.includes(s);
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => toggleDraftSize(s)}
+                      className={`py-3 text-sm transition-colors ${
+                        isSelected
+                          ? "bg-[color:var(--accent)] text-white"
+                          : "bg-[color:var(--card)] hover:brightness-95"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))}
 
-          {onChangeMaxPrice && (
-            <div>
-              <div className="text-[11px] tracking-[0.2em] uppercase mute mb-4">
-                Price Range
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {PRICE_TIERS.map(([label, val]) => (
+          <div>
+            <div className="text-[11px] tracking-[0.2em] uppercase mute mb-4">
+              Price Range
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {PRICE_TIERS.map(([label, val]) => {
+                const isSelected = draftMaxPrice === val;
+                return (
                   <button
                     key={label}
                     type="button"
-                    onClick={() => onChangeMaxPrice(val)}
+                    onClick={() => setDraftMaxPrice(val)}
                     className={`py-3 px-3 text-xs tracking-wider uppercase transition-colors ${
-                      maxPrice === val
+                      isSelected
                         ? "bg-[color:var(--accent)] text-white"
                         : "bg-[color:var(--card)] hover:brightness-95"
                     }`}
                   >
                     {label}
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
-          )}
+          </div>
         </div>
 
+        {/* Footer actions: Clear draft and Apply */}
         <div className="p-6 border-t line flex items-center gap-4 bg-[color:var(--bg)]">
           <button
             type="button"
-            onClick={onClear}
+            onClick={handleClearDraft}
             className="ul text-[11px] tracking-[0.2em] uppercase mute py-2"
           >
             Clear all
           </button>
-          <button type="button" onClick={onClose} className="btn flex-1">
-            Show {count} items
+          <button
+            type="button"
+            onClick={handleApply}
+            className="btn flex-1 tracking-[0.25em]"
+          >
+            Apply
           </button>
         </div>
       </aside>

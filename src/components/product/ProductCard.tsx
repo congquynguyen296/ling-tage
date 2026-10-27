@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Product } from "@/types";
 import { money, getSafeProductImage } from "@/config/utils";
-import { useCartStore } from "@/service/cart/store";
 import { useProductStore } from "@/service/products/store";
+import { useCartStore } from "@/service/cart/store";
+import { flyToCart } from "@/components/cart/FlyToCart";
 import { Icons } from "@/components/ui/Icons";
 
 interface ProductCardProps {
@@ -13,85 +14,190 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const addItem = useCartStore((s) => s.addItem);
   const wishlistIds = useProductStore((s) => s.wishlistIds);
   const toggleWishlist = useProductStore((s) => s.toggleWishlist);
+  const addItem = useCartStore((s) => s.addItem);
 
   const isWishlisted = wishlistIds.includes(product.id);
-  const primaryImg = getSafeProductImage(product);
+  const images =
+    product.images && product.images.length > 0
+      ? product.images
+      : [getSafeProductImage(product)];
+  const totalImages = images.length;
+  const isMulti = totalImages > 1;
 
-  const handleQuickAdd = () => {
-    const targetSize =
-      selectedSize || (product.sizes.length === 1 ? product.sizes[0] : null);
-    addItem(product, targetSize, 1);
+  // Extended track for seamless infinite horizontal slide
+  // Structure: [lastImage, ...allImages, firstImage]
+  const extendedImages = isMulti
+    ? [
+        getSafeProductImage(product, totalImages - 1),
+        ...images.map((_, i) => getSafeProductImage(product, i)),
+        getSafeProductImage(product, 0),
+      ]
+    : [getSafeProductImage(product, 0)];
+
+  const [trackIndex, setTrackIndex] = useState(isMulti ? 1 : 0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const isSlidingRef = useRef(false);
+
+  useEffect(() => {
+    setTrackIndex(isMulti ? 1 : 0);
+    setIsTransitioning(false);
+    isSlidingRef.current = false;
+  }, [product.id, isMulti]);
+
+  const handlePrevImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isMulti || isSlidingRef.current) return;
+    isSlidingRef.current = true;
+    setIsTransitioning(true);
+    setTrackIndex((prev) => prev - 1);
+  };
+
+  const handleNextImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isMulti || isSlidingRef.current) return;
+    isSlidingRef.current = true;
+    setIsTransitioning(true);
+    setTrackIndex((prev) => prev + 1);
+  };
+
+  const handleTransitionEnd = () => {
+    setIsTransitioning(false);
+    isSlidingRef.current = false;
+    if (trackIndex === 0) {
+      setTrackIndex(totalImages);
+    } else if (trackIndex === totalImages + 1) {
+      setTrackIndex(1);
+    }
+  };
+
+  const activeRealIndex = isMulti
+    ? (trackIndex - 1 + totalImages) % totalImages
+    : 0;
+
+  const displaySize = product.sizes?.[0] || product.variants?.[0]?.size || "One Size";
+
+  const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const success = addItem(product, displaySize, 1);
+    if (success) {
+      flyToCart(getSafeProductImage(product, activeRealIndex), e.currentTarget);
+    }
   };
 
   return (
     <div className="group rv in">
       <div className="relative overflow-hidden card" style={{ aspectRatio: "3/4" }}>
-        <img
-          src={primaryImg}
-          alt={product.name}
-          loading="lazy"
-          className="pimg absolute inset-0 w-full h-full object-cover"
-          onError={(e) => {
-            (e.currentTarget as HTMLImageElement).src =
-              "/images/products/p1-01.jpg";
+        {/* Animated Carousel Track with smooth horizontal glide */}
+        <div
+          className="flex h-full w-full"
+          style={{
+            transform: isMulti
+              ? `translate3d(-${trackIndex * 100}%, 0, 0)`
+              : "none",
+            transition: isTransitioning
+              ? "transform 450ms cubic-bezier(0.16, 1, 0.3, 1)"
+              : "none",
+            willChange: "transform",
           }}
-        />
+          onTransitionEnd={handleTransitionEnd}
+        >
+          {extendedImages.map((imgSrc, i) => (
+            <div key={i} className="relative w-full h-full shrink-0">
+              {/* Note: Do not use .pimg to prevent hover zoom on the card */}
+              <img
+                src={imgSrc}
+                alt={`${product.name} angle ${i}`}
+                loading="lazy"
+                className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src =
+                    "/images/products/p1-01.jpg";
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Clickable Card Link */}
         <Link
           href={`/product/${product.slug}`}
           aria-label={product.name}
-          className="absolute inset-0"
+          className="absolute inset-0 z-10"
         />
 
         {product.originalPrice && (
-          <span className="absolute left-3 top-3 bg-white text-black text-[10px] tracking-widest px-2 py-1 uppercase z-10">
+          <span className="absolute left-3 top-3 bg-white text-black text-[10px] tracking-widest px-2 py-1 uppercase z-20 pointer-events-none">
             Sale
           </span>
         )}
 
+        {/* Wishlist Button */}
         <button
           type="button"
           onClick={(e) => {
             e.preventDefault();
+            e.stopPropagation();
             toggleWishlist(product.id);
           }}
           aria-label="Toggle Wishlist"
-          className="absolute right-3 top-3 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+          className="absolute right-3 top-3 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20"
         >
           {Icons.heart(isWishlisted)}
         </button>
 
-        <div className="qa absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-[color:var(--bg)]/95 backdrop-blur-sm p-3 z-10">
-          <div className="flex flex-wrap gap-1.5 mb-2">
-            {product.sizes.map((size) => {
-              const variant = product.variants?.find((v) => v.size === size);
-              const outOfStock = variant ? variant.stock <= 0 : false;
-              return (
-                <button
-                  key={size}
-                  type="button"
-                  disabled={outOfStock}
-                  onClick={() => setSelectedSize(size)}
-                  className={`text-[11px] min-w-8 px-2 py-1 border line transition-colors ${
-                    selectedSize === size
-                      ? "bg-[color:var(--accent)] text-white"
-                      : outOfStock
-                      ? "opacity-35 line-through cursor-not-allowed"
-                      : "hover:border-[color:var(--fg)]"
-                  }`}
-                >
-                  {size}
-                </button>
-              );
-            })}
-          </div>
+        {/* Left Arrow Button (Slide Left) */}
+        <button
+          type="button"
+          onClick={handlePrevImage}
+          aria-label="Previous image"
+          className="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-black shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 z-20 hover:scale-105 active:scale-95"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+
+        {/* Right Arrow Button (Slide Right) */}
+        <button
+          type="button"
+          onClick={handleNextImage}
+          aria-label="Next image"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 hover:bg-white text-black shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 z-20 hover:scale-105 active:scale-95"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+
+        {/* Add to Cart button on card hover */}
+        <div className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-[color:var(--bg)]/95 backdrop-blur-sm p-2.5 z-20">
           <button
             type="button"
-            onClick={handleQuickAdd}
-            className="w-full text-[11px] tracking-[0.2em] uppercase py-2.5 bg-[color:var(--accent)] text-white hover:opacity-90"
+            onClick={handleAddToCart}
+            className="w-full text-[11px] tracking-[0.2em] uppercase py-2.5 bg-[color:var(--accent)] text-white hover:opacity-90 font-medium transition-opacity"
           >
             Add to cart
           </button>
@@ -103,7 +209,10 @@ export function ProductCard({ product }: ProductCardProps) {
           <Link href={`/product/${product.slug}`} className="uppercase tracking-wide block">
             {product.name}
           </Link>
-          <div className="mute text-xs mt-0.5">{product.color}</div>
+          <div className="mute text-xs mt-0.5">
+            {product.color}
+            {displaySize && ` · Size ${displaySize}`}
+          </div>
         </div>
         <div className="sm:text-right whitespace-nowrap">
           {product.originalPrice && (
@@ -115,4 +224,3 @@ export function ProductCard({ product }: ProductCardProps) {
     </div>
   );
 }
-

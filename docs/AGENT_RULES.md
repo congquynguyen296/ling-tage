@@ -39,6 +39,7 @@ Trước khi thông báo hoàn tất cho người dùng:
 - [ ] Schema Zod đã được tạo và validate đầy đủ.
 - [ ] Hook hoặc Store Zustand đã được cập nhật (nếu có state mới).
 - [ ] Directive `"use client";` được đặt ở dòng 1 nếu có React hook / browser API.
+- [ ] Phân rã trang lớn thành các sub-components độc lập, không để logic nghiệp vụ trong Page (theo CONVENTIONS.md Mục 5 & 6).
 - [ ] Chạy `npx tsc --noEmit` kiểm tra toàn bộ type: **0 Errors**.
 - [ ] Kiểm tra responsive trên mobile và desktop.
 
